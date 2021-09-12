@@ -14,6 +14,7 @@ type IItemRepository interface {
 	GetTransaction() (*pg.Tx, error)
 	Commit(tx *pg.Tx)
 	Rollback(tx *pg.Tx)
+	CloseTransaction(tx *pg.Tx, err error)
 }
 
 type itemRepository struct {
@@ -79,6 +80,18 @@ func (i itemRepository) Rollback(tx *pg.Tx) {
 	err := tx.Rollback()
 	if err != nil {
 		log.Error("Failed to rollback current transaction ", err)
+	}
+}
+
+func (i itemRepository) CloseTransaction(tx *pg.Tx, err error) {
+	if tx != nil {
+		rec := recover()
+		if err != nil || rec != nil {
+			log.Error(err, " \n ", rec)
+			i.Rollback(tx)
+		} else {
+			i.Commit(tx)
+		}
 	}
 }
 
