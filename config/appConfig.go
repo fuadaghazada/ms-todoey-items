@@ -9,6 +9,12 @@ import (
 type args struct {
 	LogLevel            string `arg:"env:LOG_LEVEL"`
 	Port                int    `arg:"env:PORT"`
+	DbUrl               string `arg:"env:DB_TODOEY_ITEMS_URL"`
+	DbUser              string `arg:"env:DB_TODOEY_ITEMS_USER"`
+	DbPass              string `arg:"env:DB_TODOEY_ITEMS_PASS"`
+	DbName              string `arg:"env:DB_TODOEY_ITEMS_NAME"`
+	DbPoolSize          int    `arg:"env:DB_POOL_SIZE"`
+	DbConnectionTimeout string `arg:"env:DB_CONNECTION_TIMEOUT"`
 }
 
 var Props args

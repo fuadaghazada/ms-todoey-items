@@ -2,13 +2,19 @@ package main
 
 import (
 	"fmt"
+	"github.com/fuadaghazada/ms-todoey-items/config"
+	"github.com/fuadaghazada/ms-todoey-items/db"
 	log "github.com/sirupsen/logrus"
-	"ms-todoey-items/config"
+
 	"net/http"
 )
 
 func main() {
 	config.LoadConfig()
+
+	db.MigrateDb()
+	dbCon := db.ConnectDb()
+	defer dbCon.Close()
 
 	port := config.Props.Port
 

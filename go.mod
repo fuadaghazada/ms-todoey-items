@@ -1,4 +1,4 @@
-module ms-todoey-items
+module github.com/fuadaghazada/ms-todoey-items
 
 go 1.16
 
