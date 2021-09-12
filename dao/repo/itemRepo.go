@@ -7,7 +7,8 @@ import (
 )
 
 type IItemRepository interface {
-	GetItemsByUserID(tx *pg.Tx, userID string) (*[]model.ItemEntity, error)
+	GetItemsByUserID(userID string) (*[]model.ItemEntity, error)
+	GetTransaction() (*pg.Tx, error)
 	Commit(tx *pg.Tx)
 	Rollback(tx *pg.Tx)
 }
@@ -20,7 +21,7 @@ func NewItemRepository(orm *pg.DB) IItemRepository {
 	return &itemRepository{db: orm}
 }
 
-func (i itemRepository) GetItemsByUserID(tx *pg.Tx, userID string) (*[]model.ItemEntity, error) {
+func (i itemRepository) GetItemsByUserID(userID string) (*[]model.ItemEntity, error) {
 	log.Debug("ActionLog.GetItemsByUserID.start")
 
 	itemList := make([]model.ItemEntity, 0)
@@ -38,6 +39,11 @@ func (i itemRepository) GetItemsByUserID(tx *pg.Tx, userID string) (*[]model.Ite
 	log.Debug("ActionLog.GetItemsByUserID.end")
 
 	return &itemList, nil
+}
+
+func (i *itemRepository) GetTransaction() (*pg.Tx, error) {
+	t, err := i.db.Begin()
+	return t, err
 }
 
 func (i itemRepository) Commit(tx *pg.Tx) {
