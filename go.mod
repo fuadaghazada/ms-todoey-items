@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	github.com/alexflint/go-arg v1.4.2
+	github.com/go-chi/chi/v5 v5.0.4 // indirect
 	github.com/go-pg/pg v8.0.7+incompatible
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/joho/godotenv v1.3.0
