@@ -13,12 +13,12 @@ func ErrorHandler(handler func(w http.ResponseWriter, r *http.Request) error) ht
 			case *BadRequestError:
 				w.WriteHeader(http.StatusBadRequest)
 				_ = json.NewEncoder(w).Encode(e)
+			case *ItemNotFoundError:
+				w.WriteHeader(http.StatusNotFound)
+				_ = json.NewEncoder(w).Encode(e)
 			default:
-				http.Error(
-					w,
-					http.StatusText(http.StatusInternalServerError),
-					http.StatusInternalServerError,
-				)
+				w.WriteHeader(http.StatusInternalServerError)
+				_ = json.NewEncoder(w).Encode(NewUnexpectedError())
 			}
 		}
 	}

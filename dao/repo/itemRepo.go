@@ -1,13 +1,16 @@
 package repo
 
 import (
+	"errors"
 	"github.com/fuadaghazada/ms-todoey-items/dao/model"
 	"github.com/go-pg/pg"
+	"github.com/go-pg/pg/orm"
 	log "github.com/sirupsen/logrus"
 )
 
 type IItemRepository interface {
 	GetItemsByUserID(userID string) (*[]model.ItemEntity, error)
+	GetItemByIDAndUserID(tx *pg.Tx, id int, userID string) (*model.ItemEntity, error)
 	GetTransaction() (*pg.Tx, error)
 	Commit(tx *pg.Tx)
 	Rollback(tx *pg.Tx)
@@ -25,11 +28,7 @@ func (i itemRepository) GetItemsByUserID(userID string) (*[]model.ItemEntity, er
 	log.Debug("ActionLog.GetItemsByUserID.start")
 
 	itemList := make([]model.ItemEntity, 0)
-	err := i.db.Model(&itemList).
-		ColumnExpr("distinct items.id, items.title, items.description").
-		ColumnExpr("items.user_id, items.created_at, items.updated_at").
-		Where("items.user_id = ?", userID).
-		Select()
+	err := getItemsInfo(i.db.Model(&itemList), userID).Select()
 
 	if err != nil {
 		log.Error(err)
@@ -39,6 +38,29 @@ func (i itemRepository) GetItemsByUserID(userID string) (*[]model.ItemEntity, er
 	log.Debug("ActionLog.GetItemsByUserID.end")
 
 	return &itemList, nil
+}
+
+func (i itemRepository) GetItemByIDAndUserID(tx *pg.Tx, id int, userID string) (*model.ItemEntity, error) {
+	log.Debug("ActionLog.GetItemByIDAndUserID.start")
+
+	item := new(model.ItemEntity)
+	err := tx.Model(item).
+		Where("user_id = ?", userID).
+		Where("id = ?", id).Select()
+
+	if errors.Is(err, pg.ErrNoRows) {
+		log.Debugf("ActionLog.GetItemsByIDAndUserID.info: No item row found with id: %v", id)
+		return nil, nil
+	}
+
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+
+	log.Debug("ActionLog.GetItemByIDAndUserID.end")
+
+	return item, nil
 }
 
 func (i *itemRepository) GetTransaction() (*pg.Tx, error) {
@@ -58,4 +80,16 @@ func (i itemRepository) Rollback(tx *pg.Tx) {
 	if err != nil {
 		log.Error("Failed to rollback current transaction ", err)
 	}
+}
+
+func getItemsInfo(q *orm.Query, userID string) *orm.Query {
+	query := q.
+		ColumnExpr("distinct items.id, items.title, items.description").
+		ColumnExpr("items.user_id, items.created_at, items.updated_at")
+
+	if userID != "" {
+		return query.Where("items.user_id = ?", userID)
+	}
+
+	return query
 }
