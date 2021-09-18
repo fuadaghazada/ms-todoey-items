@@ -9,9 +9,10 @@ import (
 )
 
 type IItemService interface {
-	CreateItem(itemDto *model.CreateItemDto, userID string) (*model.ItemDto, error)
+	CreateItem(itemDto *model.CreateUpdateItemDto, userID string) (*model.ItemDto, error)
 	GetUserItems(userID string) (*[]model.ItemDto, error)
 	GetUserItem(id int, userID string) (*model.ItemDto, error)
+	UpdateItem(itemDto *model.CreateUpdateItemDto, itemID int, userID string) (*model.ItemDto, error)
 }
 
 type itemService struct {
@@ -22,7 +23,7 @@ func NewItemService(itemRepo repo.IItemRepository) IItemService {
 	return &itemService{itemRepo: itemRepo}
 }
 
-func (i *itemService) CreateItem(itemDto *model.CreateItemDto, userID string) (*model.ItemDto, error) {
+func (i *itemService) CreateItem(itemDto *model.CreateUpdateItemDto, userID string) (*model.ItemDto, error) {
 	log.Debugf("ActionLog.CreateItem.start: User#%v, Item#%v", userID, itemDto)
 
 	itemEntity := itemMapper.ToEntityCreate(itemDto, userID)
@@ -81,4 +82,32 @@ func (i *itemService) GetUserItem(id int, userID string) (*model.ItemDto, error)
 	log.Debugf("ActionLog.GetUserItem.end: Item#%v, User#%v", id, userID)
 
 	return itemDTO, nil
+}
+
+func (i *itemService) UpdateItem(itemDto *model.CreateUpdateItemDto, itemID int, userID string) (*model.ItemDto, error) {
+	log.Debugf("ActionLog.UpdateItem.start: User#%v, Item#%v", userID, itemDto)
+
+	tx, _ := i.itemRepo.GetTransaction()
+
+	itemEntity, err := i.itemRepo.GetItemByIDAndUserID(tx, itemID, userID)
+	if err != nil {
+		log.Errorf("ActionLog.UpdateItem.error: Cannot update item -> %v", err)
+		return nil, err
+	}
+
+	itemEntity = itemMapper.ToEntityUpdate(itemDto, itemEntity)
+
+	updatedItem, err := i.itemRepo.SaveItem(tx, itemEntity)
+	if err != nil {
+		log.Error("ActionLog.UpdateItem.error: Database error")
+		return nil, exception.NewDatabaseError()
+	}
+
+	defer i.itemRepo.CloseTransaction(tx, err)
+
+	resultItemDto := itemMapper.ToDTO(updatedItem)
+
+	log.Debugf("ActionLog.CreateItem.end")
+
+	return resultItemDto, nil
 }

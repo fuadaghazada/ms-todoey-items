@@ -1,6 +1,6 @@
 package model
 
-type CreateItemDto struct {
+type CreateUpdateItemDto struct {
 	Title       string    `json:"title"`
 	Description string    `json:"description"`
 }

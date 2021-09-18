@@ -22,6 +22,7 @@ func NewItemHandler(router *chi.Mux, itemService service.IItemService) *chi.Mux 
 	router.Post("/items", exception.ErrorHandler(handler.CreateItem))
 	router.Get("/items", exception.ErrorHandler(handler.GetUserItems))
 	router.Get("/items/{id}", exception.ErrorHandler(handler.GetUserItem))
+	router.Put("/items/{id}", exception.ErrorHandler(handler.UpdateItem))
 
 	return router
 }
@@ -34,7 +35,7 @@ func (i *itemHandler) CreateItem(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	body, err := ioutil.ReadAll(r.Body)
-	itemRequestDto := new(model.CreateItemDto)
+	itemRequestDto := new(model.CreateUpdateItemDto)
 	err = json.Unmarshal(body, itemRequestDto)
 	if err != nil {
 		log.Errorf("ActionLog.CreateItem.error: %v", err)
@@ -87,6 +88,39 @@ func (i *itemHandler) GetUserItem(w http.ResponseWriter, r *http.Request) error 
 	res, err := i.itemService.GetUserItem(itemID, userID)
 	if err != nil {
 		log.Errorf("ActionLog.GetUserItem.error: %v", err)
+		return err
+	}
+
+	w.Header().Add(model.ContentType, model.ApplicationJSON)
+	_ = json.NewEncoder(w).Encode(res)
+
+	return nil
+}
+
+func (i *itemHandler) UpdateItem(w http.ResponseWriter, r *http.Request) error {
+	userID, err := getUserID(r)
+	if err != nil {
+		log.Errorf("ActionLog.UpdateItem.error: %v", err)
+		return err
+	}
+	itemIDStr := chi.URLParam(r, "id")
+	itemID, err := strconv.Atoi(itemIDStr)
+	if err != nil {
+		log.Errorf("ActionLog.UpdateItem.error: %v", err)
+		return exception.NewBadRequestError("error.invalid-item-id", "Invalid item ID")
+	}
+
+	body, err := ioutil.ReadAll(r.Body)
+	itemRequestDto := new(model.CreateUpdateItemDto)
+	err = json.Unmarshal(body, itemRequestDto)
+	if err != nil {
+		log.Errorf("ActionLog.UpdateItem.error: %v", err)
+		return exception.NewBadRequestError("error.cannot-parse-item-data", "Cannot parse item data")
+	}
+
+	res, err := i.itemService.UpdateItem(itemRequestDto, itemID, userID)
+	if err != nil {
+		log.Errorf("ActionLog.UpdateItem.error: %v", err)
 		return err
 	}
 
