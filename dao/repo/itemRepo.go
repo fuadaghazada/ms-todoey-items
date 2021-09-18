@@ -34,7 +34,7 @@ func (i itemRepository) SaveItem(tx *pg.Tx, item *model.ItemEntity) (*model.Item
 		log.Error("ActionLog.SaveItem.error: Item cannot be created")
 		return nil, err
 	}
-	
+
 	log.Debug("ActionLog.SaveItem.end")
 	return item, nil
 }
@@ -60,6 +60,7 @@ func (i *itemRepository) GetItemByIDAndUserID(tx *pg.Tx, id int, userID string) 
 
 	item := new(model.ItemEntity)
 	err := tx.Model(item).
+		Where("items.deleted_at is null").
 		Where("user_id = ?", userID).
 		Where("id = ?", id).Select()
 
@@ -112,7 +113,8 @@ func (i *itemRepository) CloseTransaction(tx *pg.Tx, err error) {
 func getItemsInfo(q *orm.Query, userID string) *orm.Query {
 	query := q.
 		ColumnExpr("distinct items.id, items.title, items.description").
-		ColumnExpr("items.user_id, items.created_at, items.updated_at")
+		ColumnExpr("items.user_id, items.created_at, items.updated_at").
+		Where("items.deleted_at is null")
 
 	if userID != "" {
 		return query.Where("items.user_id = ?", userID)

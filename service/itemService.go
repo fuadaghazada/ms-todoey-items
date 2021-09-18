@@ -8,6 +8,7 @@ import (
 	"github.com/fuadaghazada/ms-todoey-items/model"
 	"github.com/go-pg/pg"
 	log "github.com/sirupsen/logrus"
+	"time"
 )
 
 type IItemService interface {
@@ -15,6 +16,7 @@ type IItemService interface {
 	GetUserItems(userID string) (*[]model.ItemDto, error)
 	GetUserItem(id int, userID string) (*model.ItemDto, error)
 	UpdateItem(itemDto *model.CreateUpdateItemDto, itemID int, userID string) (*model.ItemDto, error)
+	DeleteItem(itemID int, userID string) (*model.ItemDto, error)
 }
 
 type itemService struct {
@@ -104,6 +106,31 @@ func (i *itemService) UpdateItem(itemDto *model.CreateUpdateItemDto, itemID int,
 	log.Debugf("ActionLog.CreateItem.end")
 
 	return resultItemDto, nil
+}
+
+func (i *itemService) DeleteItem(itemID int, userID string) (*model.ItemDto, error) {
+	log.Debugf("ActionLog.DeleteItem.start: User#%v, Item#%v", userID, itemID)
+
+	itemEntity, tx, err := i.getItem(itemID, userID)
+	if err != nil {
+		log.Errorf("ActionLog.DeleteItem.error: %v", err)
+		return nil, err
+	}
+
+	itemEntity.DeletedAt = time.Now()
+	deletedItem, err := i.itemRepo.SaveItem(tx, itemEntity)
+	if err != nil {
+		log.Errorf("ActionLog.DeleteItem.error: Database error %v", err)
+		return nil, exception.NewDatabaseError()
+	}
+
+	defer i.itemRepo.CloseTransaction(tx, err)
+
+	deletedItemDto := itemMapper.ToDTO(deletedItem)
+
+	log.Debugf("ActionLog.DeleteItem.end")
+
+	return deletedItemDto, nil
 }
 
 func (i *itemService) getItem(id int, userID string) (*entity.ItemEntity, *pg.Tx, error) {

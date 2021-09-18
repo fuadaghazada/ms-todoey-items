@@ -23,6 +23,7 @@ func NewItemHandler(router *chi.Mux, itemService service.IItemService) *chi.Mux 
 	router.Get("/items", exception.ErrorHandler(handler.GetUserItems))
 	router.Get("/items/{id}", exception.ErrorHandler(handler.GetUserItem))
 	router.Put("/items/{id}", exception.ErrorHandler(handler.UpdateItem))
+	router.Delete("/items/{id}", exception.ErrorHandler(handler.DeleteItem))
 
 	return router
 }
@@ -121,6 +122,31 @@ func (i *itemHandler) UpdateItem(w http.ResponseWriter, r *http.Request) error {
 	res, err := i.itemService.UpdateItem(itemRequestDto, itemID, userID)
 	if err != nil {
 		log.Errorf("ActionLog.UpdateItem.error: %v", err)
+		return err
+	}
+
+	w.Header().Add(model.ContentType, model.ApplicationJSON)
+	_ = json.NewEncoder(w).Encode(res)
+
+	return nil
+}
+
+func (i *itemHandler) DeleteItem(w http.ResponseWriter, r *http.Request) error {
+	userID, err := getUserID(r)
+	if err != nil {
+		log.Errorf("ActionLog.UpdateItem.error: %v", err)
+		return err
+	}
+	itemIDStr := chi.URLParam(r, "id")
+	itemID, err := strconv.Atoi(itemIDStr)
+	if err != nil {
+		log.Errorf("ActionLog.DeleteItem.error: %v", err)
+		return exception.NewBadRequestError("error.invalid-item-id", "Invalid item ID")
+	}
+
+	res, err := i.itemService.DeleteItem(itemID, userID)
+	if err != nil {
+		log.Errorf("ActionLog.DeleteItem.error: %v", err)
 		return err
 	}
 
