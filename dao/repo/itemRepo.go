@@ -9,6 +9,7 @@ import (
 )
 
 type IItemRepository interface {
+	SaveItem(tx *pg.Tx, item *model.ItemEntity) (*model.ItemEntity, error)
 	GetItemsByUserID(userID string) (*[]model.ItemEntity, error)
 	GetItemByIDAndUserID(tx *pg.Tx, id int, userID string) (*model.ItemEntity, error)
 	GetTransaction() (*pg.Tx, error)
@@ -25,7 +26,20 @@ func NewItemRepository(orm *pg.DB) IItemRepository {
 	return &itemRepository{db: orm}
 }
 
-func (i itemRepository) GetItemsByUserID(userID string) (*[]model.ItemEntity, error) {
+func (i itemRepository) SaveItem(tx *pg.Tx, item *model.ItemEntity) (*model.ItemEntity, error) {
+	log.Debug("ActionLog.SaveItem.start")
+
+	_, err := tx.Model(item).OnConflict("(id) DO UPDATE").Insert()
+	if err != nil {
+		log.Error("ActionLog.SaveItem.error: Item cannot be created")
+		return nil, err
+	}
+	
+	log.Debug("ActionLog.SaveItem.end")
+	return item, nil
+}
+
+func (i *itemRepository) GetItemsByUserID(userID string) (*[]model.ItemEntity, error) {
 	log.Debug("ActionLog.GetItemsByUserID.start")
 
 	itemList := make([]model.ItemEntity, 0)
@@ -41,7 +55,7 @@ func (i itemRepository) GetItemsByUserID(userID string) (*[]model.ItemEntity, er
 	return &itemList, nil
 }
 
-func (i itemRepository) GetItemByIDAndUserID(tx *pg.Tx, id int, userID string) (*model.ItemEntity, error) {
+func (i *itemRepository) GetItemByIDAndUserID(tx *pg.Tx, id int, userID string) (*model.ItemEntity, error) {
 	log.Debug("ActionLog.GetItemByIDAndUserID.start")
 
 	item := new(model.ItemEntity)
@@ -83,7 +97,7 @@ func (i itemRepository) Rollback(tx *pg.Tx) {
 	}
 }
 
-func (i itemRepository) CloseTransaction(tx *pg.Tx, err error) {
+func (i *itemRepository) CloseTransaction(tx *pg.Tx, err error) {
 	if tx != nil {
 		rec := recover()
 		if err != nil || rec != nil {

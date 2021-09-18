@@ -7,6 +7,7 @@ import (
 	"github.com/fuadaghazada/ms-todoey-items/service"
 	"github.com/go-chi/chi/v5"
 	log "github.com/sirupsen/logrus"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 )
@@ -18,10 +19,37 @@ type itemHandler struct {
 func NewItemHandler(router *chi.Mux, itemService service.IItemService) *chi.Mux {
 	handler := &itemHandler{itemService: itemService}
 
+	router.Post("/items", exception.ErrorHandler(handler.CreateItem))
 	router.Get("/items", exception.ErrorHandler(handler.GetUserItems))
 	router.Get("/items/{id}", exception.ErrorHandler(handler.GetUserItem))
 
 	return router
+}
+
+func (i *itemHandler) CreateItem(w http.ResponseWriter, r *http.Request) error {
+	userID, err := getUserID(r)
+	if err != nil {
+		log.Errorf("ActionLog.CreateItem.error: %v", err)
+		return err
+	}
+
+	body, err := ioutil.ReadAll(r.Body)
+	itemRequestDto := new(model.CreateItemDto)
+	err = json.Unmarshal(body, itemRequestDto)
+	if err != nil {
+		log.Errorf("ActionLog.CreateItem.error: %v", err)
+		return exception.NewBadRequestError("error.cannot-parse-item-data", "Cannot parse item data")
+	}
+
+	result, err := i.itemService.CreateItem(itemRequestDto, userID)
+	if err != nil {
+		log.Errorf("ActionLog.CreateItem.error: %v", err)
+		return err
+	}
+
+	w.Header().Add(model.ContentType, model.ApplicationJSON)
+
+	return json.NewEncoder(w).Encode(result)
 }
 
 func (i *itemHandler) GetUserItems(w http.ResponseWriter, r *http.Request) error {

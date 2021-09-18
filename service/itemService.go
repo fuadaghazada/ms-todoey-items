@@ -9,6 +9,7 @@ import (
 )
 
 type IItemService interface {
+	CreateItem(itemDto *model.CreateItemDto, userID string) (*model.ItemDto, error)
 	GetUserItems(userID string) (*[]model.ItemDto, error)
 	GetUserItem(id int, userID string) (*model.ItemDto, error)
 }
@@ -21,7 +22,28 @@ func NewItemService(itemRepo repo.IItemRepository) IItemService {
 	return &itemService{itemRepo: itemRepo}
 }
 
-func (i itemService) GetUserItems(userID string) (*[]model.ItemDto, error) {
+func (i *itemService) CreateItem(itemDto *model.CreateItemDto, userID string) (*model.ItemDto, error) {
+	log.Debugf("ActionLog.CreateItem.start: User#%v, Item#%v", userID, itemDto)
+
+	itemEntity := itemMapper.ToEntityCreate(itemDto, userID)
+
+	tx, _ := i.itemRepo.GetTransaction()
+	createdItem, err := i.itemRepo.SaveItem(tx, itemEntity)
+	if err != nil {
+		log.Error("ActionLog.CreateItem.error: Database error")
+		return nil, exception.NewDatabaseError()
+	}
+
+	defer i.itemRepo.CloseTransaction(tx, err)
+
+	resultItemDto := itemMapper.ToDTO(createdItem)
+
+	log.Debugf("ActionLog.CreateItem.end")
+
+	return resultItemDto, nil
+}
+
+func (i *itemService) GetUserItems(userID string) (*[]model.ItemDto, error) {
 	log.Debugf("ActionLog.GetUserItems.start: User#%v", userID)
 
 	itemEntities, err := i.itemRepo.GetItemsByUserID(userID)
@@ -37,7 +59,7 @@ func (i itemService) GetUserItems(userID string) (*[]model.ItemDto, error) {
 	return &itemDTOs, nil
 }
 
-func (i itemService) GetUserItem(id int, userID string) (*model.ItemDto, error) {
+func (i *itemService) GetUserItem(id int, userID string) (*model.ItemDto, error) {
 	log.Debugf("ActionLog.GetUserItem.start: Item#%v, User#%v", id, userID)
 
 	tx, _ := i.itemRepo.GetTransaction()

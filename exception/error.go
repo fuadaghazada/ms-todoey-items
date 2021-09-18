@@ -22,6 +22,21 @@ func (b UnexpectedError) Error() string {
 
 // --- / --- / --- / --- / --- / --- / --- / --- / ---
 
+type DatabaseError baseError
+
+func NewDatabaseError() error {
+	return &DatabaseError{
+		Message: "Database Error",
+		Code:    "database-error",
+	}
+}
+
+func (b DatabaseError) Error() string {
+	return b.Message
+}
+
+// --- / --- / --- / --- / --- / --- / --- / --- / ---
+
 type BadRequestError baseError
 
 func NewBadRequestError(code string, message string) error {
