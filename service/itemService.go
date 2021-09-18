@@ -95,6 +95,11 @@ func (i *itemService) UpdateItem(itemDto *model.CreateUpdateItemDto, itemID int,
 		return nil, err
 	}
 
+	if itemEntity == nil {
+		log.Errorf("ActionLog.GetUserItem.error: Item not found %v", err)
+		return nil, exception.NewItemNotFoundError("error.item-not-found", "Item not found")
+	}
+
 	itemEntity = itemMapper.ToEntityUpdate(itemDto, itemEntity)
 
 	updatedItem, err := i.itemRepo.SaveItem(tx, itemEntity)
